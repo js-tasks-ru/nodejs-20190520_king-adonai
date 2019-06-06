@@ -19,7 +19,7 @@ server.on('request', (req, res) => {
   switch (req.method) {
     case 'POST':
       const limitStream = new LimitSizeStream({ limit: 1000000 });
-      const writeStream = fs.createWriteStream(filepath, { flag: 'wx' });
+      const writeStream = fs.createWriteStream(filepath, { flags: 'wx' });
 
       req
         .pipe(limitStream)
@@ -32,7 +32,6 @@ server.on('request', (req, res) => {
         })
         .pipe(writeStream)
         .on('error', err => {
-          console.log(err)
           if (err.code === 'EEXIST') {
             res.statusCode = 409;
             res.end('file already exists!');
