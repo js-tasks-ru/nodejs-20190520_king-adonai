@@ -23,9 +23,17 @@ server.on('request', (req, res) => {
         if (error.code === 'ENOENT') {
           res.statusCode = 404;
           res.end('File not found!');
+        } else {
+          res.statusCode = 500;
+          res.end('Internal server error');
         }
       });
       readStream.pipe(res);
+
+      res.on('close', () => {
+        if (res.finished) return;
+        readStream.destroy();
+      });
       
       break;
 
