@@ -49,6 +49,10 @@ function generatePassword(salt, password) {
   });
 }
 
+userSchema.methods.isNotConfirmedEmail = function validateEmail() {
+  return !!this.verificationToken;
+};
+
 userSchema.methods.setPassword = async function setPassword(password) {
   this.salt = crypto.randomBytes(10).toString('hex');
   this.passwordHash = await generatePassword(this.salt, password);
