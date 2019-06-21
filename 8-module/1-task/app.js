@@ -41,6 +41,12 @@ router.post('/login', async (ctx, next) => {
       return;
     }
 
+    if (user.isNotConfirmedEmail()) {
+      ctx.status = 400;
+      ctx.body = { error: 'Подтвердите email' };
+      return;
+    }
+
     const token = uuid();
 
     ctx.body = {token};
@@ -77,12 +83,40 @@ router.post('/oauth_callback', handleMongooseValidationError, async (ctx, next) 
   })(ctx, next);
 });
 
-router.post('/register', async (ctx, next) => {
+router.post('/register', handleMongooseValidationError, async (ctx, next) => {
+  const { email, displayName, password } = ctx.request.body;
 
+  const user = await User.findOne({ email });
+  if (user) {
+    ctx.status = 400;
+  }
+
+  const verificationToken = uuid();
+
+  const newUser = await new User({ email, displayName, verificationToken });
+  await newUser.setPassword(password);
+  await newUser.save();
+
+  const transportResponse = await sendMail({
+    to: email,
+    subject: 'Приветствуем на сайте learn.javascript.ru',
+    locals: { token: verificationToken },
+    template: 'confirmation'
+  });
+
+  ctx.body = { status: 'ok' };
 });
 
 router.post('/confirm', async (ctx) => {
+  const { verificationToken } = ctx.request.body;
 
+  const user = await User.findOneAndUpdate({ verificationToken }, { $unset: { verificationToken } });
+
+  if (!user) {
+    ctx.throw(400, 'Ссылка подтверждения недействительна или устарела');
+  }
+
+  ctx.body = { token: user.verificationToken };
 });
 
 app.use(router.routes());
